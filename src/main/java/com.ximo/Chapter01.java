@@ -35,6 +35,22 @@ public class Chapter01 {
         Map<String, String> article = conn.hgetAll("article:" + articleId);
         printArticle(article);
 
+        articleVote(conn, "Tom", "article:"+articleId);
+        String votes = conn.hget("article:"+articleId, "votes");
+        System.out.println("我们获得了一个新的投票，他现在的投票看起来是"+ votes);
+        assert Integer.parseInt(votes) > 1;
+
+        System.out.println("现在评分最高的前几名的文章是：");
+        List<Map<String, String>> articles = getArticles(conn, 1);
+        printArticles(articles);
+        assert articles.size() >= 1;
+//
+        addGroups(conn, articleId, new String[]{"new-group"});
+        System.out.println("我们添加了改文章到一个新的分组中， 别的书籍在：");
+        articles = getGroupArticles(conn, "new-group", 1, "score:");
+        printArticles(articles);
+        assert articles.size() >= 1;
+
     }
 
     /**
@@ -45,7 +61,7 @@ public class Chapter01 {
      * @param article
      */
     public void articleVote(Jedis conn, String user, String article) {
-        //计算投票截止时间
+        //计算投票截止时间 为一个礼拜
         long cutoff = (System.currentTimeMillis() / 1000) - ONE_WEEK_IN_SECONDS;
         //获得有序集合中的该值得分数
         if (conn.zscore("time:", article) < cutoff) {
@@ -146,15 +162,27 @@ public class Chapter01 {
         /*key*/
         String article = "article:" + articleId;
         for (String group : toAdd) {
+            /*添加到该分组*/
             conn.sadd("group:" + group, article);
         }
     }
 
+    /**
+     * 将两个set 求交集
+     * @param conn
+     * @param group
+     * @param page
+     * @param order
+     * @return
+     */
     public List<Map<String, String>> getGroupArticles(Jedis conn, String group, int page, String order) {
         String key = order + group;
         if (!conn.exists(key)) {
+            /*使用MAX来将交集中的最大值添加到行的集合中*/
             ZParams zParams = new ZParams().aggregate(ZParams.Aggregate.MAX);
+            /*求交集*/
             conn.zinterstore(key, zParams, "group:" + group, order);
+            /*设置过期时间*/
             conn.expire(key, 60);
         }
         return getArticles(conn, page, key);
@@ -166,7 +194,7 @@ public class Chapter01 {
      */
     private void printArticles(List<Map<String, String>> articles) {
         for (Map<String, String> article : articles) {
-            System.out.println("id：" + article.get("id"));
+            System.out.println("     id：" + article.get("id"));
             printArticle(article);
         }
     }
