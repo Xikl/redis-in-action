@@ -1,14 +1,12 @@
-package com.ximo;
-
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.ZParams;
 
 import java.util.*;
 
 /**
- * @description:
- * @author: 朱文赵
- * @date: 2017/11/9
+ * @author 朱文赵
+ * @date 2018/9/30 15:21
+ * @description
  */
 public class Chapter01 {
 
